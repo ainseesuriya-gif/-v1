@@ -1,0 +1,55 @@
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- ========================================================
+-- การตั้งค่า (ปรับชื่อ Event/Object ให้ตรงกับของตัวเกม)
+-- ========================================================
+local LIGHTNING_KEYWORD = "lightning" -- คำค้นหาวัตถุฟ้าผ่าใน Workspace
+local HARVEST_REMOTE_NAME = "HarvestTree" -- ชื่อ RemoteEvent สำหรับเก็บต้นไม้/ผลผลิต
+
+-- ฟังก์ชั่นสำหรับสั่งเก็บต้นไม้ทั้งหมดของคุณ
+local function harvestAllTrees()
+    print("⚡ กำลังดำเนินการเก็บต้นไม้ทั้งหมดเพื่อป้องกันฟ้าผ่า...")
+    
+    -- วิธีที่ 1: เรียกใช้ RemoteEvent ของเกมเพื่อเก็บผลผลิต/ต้นไม้
+    local harvestRemote = ReplicatedStorage:FindFirstChild(HARVEST_REMOTE_NAME, true)
+    if harvestRemote then
+        harvestRemote:FireServer()
+    end
+    
+    -- วิธีที่ 2: วนลูปกด ProximityPrompt หรือส่ง Signal ไปยังแปลงปลูกของคุณ
+    -- (กรณีที่เกมใช้ ProximityPrompt ในการเก็บ)
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") and obj.Parent and string.find(obj.Parent.Name:lower(), "tree") then
+            fireproximityprompt(obj)
+        end
+    end
+end
+
+-- ฟังก์ชั่นตรวจจับเมื่อมีวัตถุฟ้าผ่าเกิดขึ้นในเกม
+local function onObjectAdded(object)
+    local objName = object.Name:lower()
+    
+    -- ตรวจสอบว่าวัตถุที่เพิ่มเข้ามาคือฟ้าผ่าหรือไม่
+    if string.find(objName, LIGHTNING_KEYWORD) or string.find(objName, "strike") or string.find(objName, "storm") then
+        print("⚡ ตรวจพบฟ้าผ่าลงมาในแมพ!")
+        harvestAllTrees()
+    end
+end
+
+-- สแกนวัตถุใหม่ที่ถูกสร้างขึ้นใน Workspace
+Workspace.ChildAdded:Connect(onObjectAdded)
+
+-- เผื่อกรณีที่ฟ้าผ่าสปอว์นในโฟลเดอร์ย่อย
+Workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("BasePart") or descendant:IsA("Model") then
+        if string.find(descendant.Name:lower(), LIGHTNING_KEYWORD) then
+            print("⚡ ตรวจพบเอฟเฟกต์ฟ้าผ่า!")
+            harvestAllTrees()
+        end
+    end
+end)
+
+print("✅ เริ่มการทำงานสคริปต์ตรวจจับฟ้าผ่าเพื่อเก็บต้นไม้แล้ว")
